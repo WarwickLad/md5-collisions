@@ -18,9 +18,5 @@ class MD5Collisions {
         for(int i = 0; i < test.length; i++) {
         	System.out.println(test[i]);
         }
-        
-        syso
-        
-        System.out.println("new change hello");
     }
 }
