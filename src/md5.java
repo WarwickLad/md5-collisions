@@ -2,16 +2,15 @@ import java.math.*;
 import java.lang.Number.*;
 import java.lang.*;
 import java.util.*;
-
 class md5 {
 	
 	public String plaintext;
 	public String ciphertext;
 	
-	public String MDBufferA = "01100111010001010010001100000001";
-	public String MDBufferB = "11101111110011011010101110001001";
-	public String MDBufferC = "10011000101110101101110011111110";
-	public String MDBufferD = "00010000001100100101010001110110";
+	public String MDBufferA = "00000001001000110100010101100111";
+	public String MDBufferB = "10001001101010111100110111101111";
+	public String MDBufferC = "11111110110111001011101010011000";
+	public String MDBufferD = "01110110010101000011001000010000";
 	
 	public int[] AA;
 	public int[] BB;
@@ -22,8 +21,15 @@ class md5 {
 	public int[] Y;
 	public int[] Z;
 	
-	public long[] T = md5FunctionT();
-	
+	public int[][] InitialiseFunctionT() {
+		MD5FunctionT functionT = new MD5FunctionT();
+		int[][] functionTMatrix = new int[functionT.SeedData().size()][32];
+		for(int i = 0; i < functionT.SeedData().size(); i++) {
+			functionTMatrix[i] = BinaryArray(functionT.SeedData().get(i));
+		}
+		return functionTMatrix;
+	}
+
 	public void SetPlaintext(String inputstring) {
 		this.plaintext = inputstring;
 	}
@@ -194,6 +200,22 @@ class md5 {
 		}
 		return result;
 	}
+	
+	public int[] AddArray(int[] x, int[] y) {
+		int[] result = new int[x.length];
+		for(int i = 0; i < x.length; i++) {
+			result[i] = x[i] + y[i];
+		}
+		return result;
+	}
+	
+	public int[] AddArray(int[] x, int[] y, int[] z, int[] xx) {
+		int[] result = new int[x.length];
+		for(int i = 0; i < x.length; i++) {
+			result[i] = x[i] + y[i] + z[i] + xx[i];
+		}
+		return result;
+	}
 
 	public long[] md5FunctionT() {
 		long k = 4294967296L;
@@ -204,19 +226,31 @@ class md5 {
 		return T;
 	}
 
+	public int[] BitShiftLeft(int[] inputarray, int shiftvalue) {
+		int[] outputArray = new int[inputarray.length];
+		for(int i = 0; i < inputarray.length - shiftvalue; i++) {
+			outputArray[i] = inputarray[i + shiftvalue];
+		}
+		for(int i = 0; i < shiftvalue; i++) {
+			outputArray[inputarray.length - shiftvalue] = 0;
+		}
+		return outputArray;
+	}
+	
 	public ArrayList<Integer> md5Step3Process16bitWordBlocks(ArrayList<Integer> inputarraylist) {
 		/* Process each 16-word block. */
-		this.X = new int[16];
-		this.Y = new int[16];
-		this.Z = new int[16];
+		this.X = new int[32];
+		this.Y = new int[32];
+		this.Z = new int[32];
 		int[] tempA = BinaryArray(this.MDBufferA);
 		int[] tempB = BinaryArray(this.MDBufferB);
 		int[] tempC = BinaryArray(this.MDBufferC);
 		int[] tempD = BinaryArray(this.MDBufferD);
+		int[][] functionT = InitialiseFunctionT();
 		
 		for(int i = 0; i < (inputarraylist.size()/16 - 1); i++) {
 			/* Copy block i into X. */
-		     for(int j = 0; j < 16; j++) {
+		     for(int j = 0; j < 32; j++) {
 		    	 X[j] = inputarraylist.get((i*16) + j);
 		     } /* end of loop on j */
 		     
@@ -231,17 +265,30 @@ class md5 {
 		          a = b + ((a + F(b,c,d) + X[k] + T[i]) <<< s). */
 		     /* Do the following 16 operations. */
 		     
-		     for(int k = 0; k < 16; k++) {
-		    	 for(int ii = 0; ii < this.AA.length; ii++) {
-		    		 tempA[ii] = this.BB[ii] + ((this.AA[ii] + md5FunctionF(this.BB[ii],this.CC[ii],this.DD[ii])) + X[k] + ((int) this.T[k + 1]));
-		    	 }
-		     }
+		     this.AA = this.BB + BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),X[0],functionT[1])),7);
 		     
-		     [ABCD  0  7  1]  [DABC  1 12  2]  [CDAB  2 17  3]  [BCDA  3 22  4]
-		     [ABCD  4  7  5]  [DABC  5 12  6]  [CDAB  6 17  7]  [BCDA  7 22  8]
-		     [ABCD  8  7  9]  [DABC  9 12 10]  [CDAB 10 17 11]  [BCDA 11 22 12]
-		     [ABCD 12  7 13]  [DABC 13 12 14]  [CDAB 14 17 15]  [BCDA 15 22 16]
+		     
+		     
+		     
+		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[1] + ((int) this.T[2]),12));
+		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[2] + ((int) this.T[3]),17));
+		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[3] + ((int) this.T[4]),22));
+		     this.AA = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[4] + ((int) this.T[5]),7));
+		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[5] + ((int) this.T[6]),12));
+		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[6] + ((int) this.T[7]),17));
+		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[7] + ((int) this.T[8]),22));
+		     this.AA = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[8] + ((int) this.T[9]),7));
+		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[9] + ((int) this.T[10]),12));
+		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[10] + ((int) this.T[11]),17));
+		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[11] + ((int) this.T[12]),22));
+		     this.AA = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[12] + ((int) this.T[13]),7));
+		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[13] + ((int) this.T[14]),12));
+		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[14] + ((int) this.T[15]),17));
+		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[15] + ((int) this.T[16]),22));
+		     
 		}
+		ArrayList<Integer> test = new ArrayList<Integer>();
+		return test;
 	}
 
 }
