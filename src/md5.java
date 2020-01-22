@@ -17,9 +17,7 @@ class md5 {
 	public int[] CC;
 	public int[] DD;
 
-	public int[] X;
-	public int[] Y;
-	public int[] Z;
+	public ArrayList<Integer> messageDigest;
 	
 	public int[][] InitialiseFunctionT() {
 		MD5FunctionT functionT = new MD5FunctionT();
@@ -68,6 +66,15 @@ class md5 {
 	    return binaryArray;
 	}
 
+	public int[] BinaryArray32bit(String inputstring) {
+		int[] binaryArray = new int[32];
+	    String[] inputstringelement = inputstring.split("");
+	    for (int i = binaryArray.length; i > (binaryArray.length - inputstringelement.length); i--) {
+	        binaryArray[i - 1] = Integer.parseInt(inputstringelement[(i - 1) - binaryArray.length + inputstringelement.length]);
+	    }
+	    return binaryArray;
+	}
+	
 	public int[] BinaryListToBinaryArray(ArrayList<Integer> inputarray) {
 		int[] outputArray = new int[inputarray.size()];
 		for(int i = 0; i < inputarray.size(); i++) {
@@ -102,14 +109,6 @@ class md5 {
 				return a;
 			}
 		}
-	}
-	
-	public int[] arrayAddition(int[] a, int[] b) {
-		int[] result = new int[a.length];
-		for(int i = 0; i < a.length; i++) {
-			result[i] = a[i] + b[i];
-		}
-		return result;
 	}
 	
 	public ArrayList<Integer> BinaryArrayToBinaryList(int[] inputarray) {
@@ -201,19 +200,25 @@ class md5 {
 		return result;
 	}
 	
+	// method to perform bit array addition
 	public int[] AddArray(int[] x, int[] y) {
 		int[] result = new int[x.length];
+		int resultInt = 0;
 		for(int i = 0; i < x.length; i++) {
-			result[i] = x[i] + y[i];
+			resultInt += x[i]*Math.pow(2, i) + y[i]*Math.pow(2, i);
 		}
+		result = BinaryArray32bit(Integer.toBinaryString(resultInt));
 		return result;
 	}
 	
+	// method to perform bit array addition
 	public int[] AddArray(int[] x, int[] y, int[] z, int[] xx) {
 		int[] result = new int[x.length];
+		int resultInt = 0;
 		for(int i = 0; i < x.length; i++) {
-			result[i] = x[i] + y[i] + z[i] + xx[i];
+			resultInt += x[i]*Math.pow(2, i) + y[i]*Math.pow(2, i) + z[i]*Math.pow(2, i) + xx[i]*Math.pow(2, i);
 		}
+		result = BinaryArray32bit(Integer.toBinaryString(resultInt));
 		return result;
 	}
 
@@ -237,58 +242,178 @@ class md5 {
 		return outputArray;
 	}
 	
-	public ArrayList<Integer> md5Step3Process16bitWordBlocks(ArrayList<Integer> inputarraylist) {
-		/* Process each 16-word block. */
-		this.X = new int[32];
-		this.Y = new int[32];
-		this.Z = new int[32];
-		int[] tempA = BinaryArray(this.MDBufferA);
-		int[] tempB = BinaryArray(this.MDBufferB);
-		int[] tempC = BinaryArray(this.MDBufferC);
-		int[] tempD = BinaryArray(this.MDBufferD);
-		int[][] functionT = InitialiseFunctionT();
+	private static int[] PartArray(int[] array, int size, int start) {
+	    int[] part = new int[size];
+	    System.arraycopy(array, start, part, 0, size);
+	    return part;
+	}
+	
+	public void md5Step3Process16bitWordBlocks(ArrayList<Integer> inputarraylist) {
 		
-		for(int i = 0; i < (inputarraylist.size()/16 - 1); i++) {
+		int[] inputarray = BinaryListToBinaryArray(inputarraylist);
+		int[][] functionT = InitialiseFunctionT();
+		int[][] arrayX = new int[16][32];
+		
+		ArrayList<Integer> output = new ArrayList<Integer>();
+		
+		/* Process each 16-word block. */
+		
+		for(int i = 0; i < (inputarray.length/512 - 1); i++) {
 			/* Copy block i into X. */
-		     for(int j = 0; j < 32; j++) {
-		    	 X[j] = inputarraylist.get((i*16) + j);
+		     for(int j = 0; j < 16; j++) {
+		    	 arrayX[j] = PartArray(inputarray,32,32*i);
 		     } /* end of loop on j */
 		     
 		     /* Save A as AA, B as BB, C as CC, and D as DD. */
 		     this.AA = BinaryArray(this.MDBufferA);
-		     this.BB = BinaryArray(this.MDBufferA);
-		     this.CC = BinaryArray(this.MDBufferA);
-		     this.DD = BinaryArray(this.MDBufferA);
+		     this.BB = BinaryArray(this.MDBufferB);
+		     this.CC = BinaryArray(this.MDBufferC);
+		     this.DD = BinaryArray(this.MDBufferD);
 		     
 		     /* Round 1. */
 		     /* Let [abcd k s i] denote the operation
 		          a = b + ((a + F(b,c,d) + X[k] + T[i]) <<< s). */
 		     /* Do the following 16 operations. */
 		     
-		     this.AA = this.BB + BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),X[0],functionT[1])),7);
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[0],functionT[0])),7));	     
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[1],functionT[1])),12));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[2],functionT[2])),17));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[3],functionT[3])),22));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[4],functionT[4])),7));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[5],functionT[5])),12));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[6],functionT[6])),17));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[7],functionT[7])),22));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[8],functionT[8])),7));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[9],functionT[9])),12));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[10],functionT[10])),17));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[11],functionT[11])),22));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[12],functionT[12])),7));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[13],functionT[13])),12));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[14],functionT[14])),17));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[15],functionT[15])),22));
+		     
+		     /* Round 2. */
+		     /* Let [abcd k s i] denote the operation
+		          a = b + ((a + G(b,c,d) + X[k] + T[i]) <<< s). */
+		     /* Do the following 16 operations. */
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[1],functionT[16])),5));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[6],functionT[17])),9));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[11],functionT[18])),14));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[0],functionT[19])),20));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[5],functionT[20])),5));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[10],functionT[21])),9));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[15],functionT[22])),14));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[4],functionT[23])),20));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[9],functionT[24])),5));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[14],functionT[25])),9));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[3],functionT[26])),14));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[8],functionT[27])),20));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[13],functionT[28])),5));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[2],functionT[29])),9));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[7],functionT[30])),14));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[12],functionT[31])),20));
+		     
+		     /* Round 3. */
+		     /* Let [abcd k s i] denote the operation
+		          a = b + ((a + H(b,c,d) + X[k] + T[i]) <<< s). */
+		     /* Do the following 16 operations. */
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[5],functionT[32])),4));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[8],functionT[33])),11));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[11],functionT[34])),16));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[14],functionT[35])),23));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[1],functionT[36])),4));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[4],functionT[37])),11));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[7],functionT[38])),16));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[10],functionT[39])),23));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[13],functionT[40])),4));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[0],functionT[41])),11));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[3],functionT[42])),16));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[6],functionT[43])),23));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[9],functionT[44])),4));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[12],functionT[45])),11));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[15],functionT[46])),16));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[2],functionT[47])),23));
+		     
+		     /* Round 4. */
+		     /* Let [abcd k s i] denote the operation
+		          a = b + ((a + I(b,c,d) + X[k] + T[i]) <<< s). */
+		     /* Do the following 16 operations. */
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[0],functionT[48])),6));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[7],functionT[49])),10));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[14],functionT[50])),15));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[5],functionT[51])),21));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[12],functionT[52])),6));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[3],functionT[53])),10));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[10],functionT[54])),15));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[1],functionT[55])),21));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[8],functionT[56])),6));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[15],functionT[57])),10));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[6],functionT[58])),15));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[13],functionT[59])),21));
+		     
+		     this.AA = AddArray(this.BB,BitShiftLeft((AddArray(this.AA,md5FunctionF(this.BB,this.CC,this.DD),arrayX[4],functionT[60])),6));
+		     this.DD = AddArray(this.AA,BitShiftLeft((AddArray(this.DD,md5FunctionF(this.AA,this.BB,this.CC),arrayX[11],functionT[61])),10));
+		     this.CC = AddArray(this.DD,BitShiftLeft((AddArray(this.CC,md5FunctionF(this.DD,this.AA,this.BB),arrayX[2],functionT[62])),15));
+		     this.BB = AddArray(this.CC,BitShiftLeft((AddArray(this.BB,md5FunctionF(this.CC,this.DD,this.AA),arrayX[9],functionT[63])),21));
 		     
 		     
+		     /* Then perform the following additions. (That is increment each
+		        of the four registers by the value it had before this block
+		        was started.) */
 		     
+		     this.AA = AddArray(this.AA, BinaryArray(this.MDBufferA));
+		     this.BB = AddArray(this.BB, BinaryArray(this.MDBufferB));
+		     this.CC = AddArray(this.CC, BinaryArray(this.MDBufferC));
+		     this.DD = AddArray(this.DD, BinaryArray(this.MDBufferD));
 		     
-		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[1] + ((int) this.T[2]),12));
-		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[2] + ((int) this.T[3]),17));
-		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[3] + ((int) this.T[4]),22));
-		     this.AA = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[4] + ((int) this.T[5]),7));
-		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[5] + ((int) this.T[6]),12));
-		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[6] + ((int) this.T[7]),17));
-		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[7] + ((int) this.T[8]),22));
-		     this.AA = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[8] + ((int) this.T[9]),7));
-		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[9] + ((int) this.T[10]),12));
-		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[10] + ((int) this.T[11]),17));
-		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[11] + ((int) this.T[12]),22));
-		     this.AA = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[12] + ((int) this.T[13]),7));
-		     this.BB = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[13] + ((int) this.T[14]),12));
-		     this.CC = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[14] + ((int) this.T[15]),17));
-		     this.DD = this.BB + (BitShiftLeft((this.AA + md5FunctionF(this.BB,this.CC,this.DD)) + X[15] + ((int) this.T[16]),22));
-		     
+		     /* end of loop on i */ 
 		}
-		ArrayList<Integer> test = new ArrayList<Integer>();
-		return test;
+		
+		for(int i = 0; i < 32; i ++) {
+			output.add(this.AA[31 - i]);
+		}
+		for(int i = 0; i < 32; i ++) {
+			output.add(this.BB[31 - i]);
+		}
+		for(int i = 0; i < 32; i ++) {
+			output.add(this.CC[31 - i]);
+		}
+		for(int i = 0; i < 32; i ++) {
+			output.add(this.DD[31 - i]);
+		}
+		
+		// Message to Zac ..... likely to do with rotate left? and addition?
+		
+		for(int i = 0; i < output.size(); i++) {
+			System.out.print(output.get(i));
+		}
+		
+		this.messageDigest = output;
 	}
 
+	public String MessageDigestString() {
+		String messageOutput = "";
+		for(int i = 0; i < 16; i++) {
+			int tempVal = 0;
+			for(int j = 0; j < 8; j++) {
+				tempVal += this.messageDigest.get(i*8 + j)*Math.pow(2, j);
+			}
+			messageOutput.concat(String.valueOf((char)tempVal));
+		}
+		return messageOutput;	
+	}
 }

@@ -14,14 +14,8 @@ class MD5Collisions {
         ArrayList<Integer> padded = MD5.md5Step1AppendBits(binaryArray);
         ArrayList<Integer> paddedAppended = MD5.md5Step2AppendLength(padded);
         
-//        long[] test = MD5.md5FunctionT();
-//        for(int i = 0; i < test.length; i++) {
-//        	System.out.println(test[i]);
-//        }
-//        
-//        MD5.md5Step3Process16bitWordBlocks(paddedAppended);
-        
-        int[][] arraytest = MD5.InitialiseFunctionT();
-        
+        MD5.md5Step3Process16bitWordBlocks(paddedAppended);
+        String output = MD5.MessageDigestString();
+        System.out.println(output);
     }
 }
